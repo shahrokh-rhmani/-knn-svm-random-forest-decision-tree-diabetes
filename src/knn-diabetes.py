@@ -2,11 +2,15 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, confusion_matrix, classification_report
 from sklearn.model_selection import cross_val_score
+
+# Create directory for images if it doesn't exist
+os.makedirs('../img/knn', exist_ok=True)
 
 # Set display options
 plt.rcParams['font.family'] = 'DejaVu Sans'
@@ -116,7 +120,7 @@ plt.grid(True, alpha=0.3)
 plt.legend()
 
 plt.tight_layout()
-plt.savefig('../knn_metrics_plot.png', dpi=300, bbox_inches='tight')
+plt.savefig('../img/knn/knn_metrics_plot.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 # 10. Train final model with best k (based on accuracy)
@@ -145,7 +149,7 @@ sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
 plt.xlabel('Predicted')
 plt.ylabel('Actual')
 plt.title(f'Confusion Matrix for KNN (k={best_k_acc})')
-plt.savefig('../confusion_matrix.png', dpi=300, bbox_inches='tight')
+plt.savefig('../img/knn/confusion_matrix.png', dpi=300, bbox_inches='tight')
 plt.show()
 
 # 13. Classification report
@@ -176,10 +180,24 @@ plt.barh(feature_imp_df['Feature'], feature_imp_df['Importance'])
 plt.xlabel('Relative Importance')
 plt.title('Feature Importance Analysis')
 plt.tight_layout()
-plt.savefig('../feature_importance.png', dpi=300, bbox_inches='tight')
+plt.savefig('../img/knn/feature_importance.png', dpi=300, bbox_inches='tight')
 plt.show()
 
-# 15. Results analysis
+# 15. Additional plot: Comparison of all metrics
+plt.figure(figsize=(12, 8))
+plt.plot(k_values, accuracy_scores, marker='o', linewidth=2, markersize=6, label='Accuracy')
+plt.plot(k_values, precision_scores, marker='s', linewidth=2, markersize=6, label='Precision')
+plt.plot(k_values, recall_scores, marker='^', linewidth=2, markersize=6, label='Recall')
+plt.axvline(x=best_k_acc, color='red', linestyle='--', alpha=0.7, label=f'Best k={best_k_acc}')
+plt.xlabel('K Value')
+plt.ylabel('Score')
+plt.title('KNN Performance Metrics vs K Value')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.savefig('../img/knn/all_metrics_comparison.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+# 16. Results analysis
 print("\n" + "="*50)
 print("RESULTS ANALYSIS:")
 print("="*50)
@@ -188,6 +206,7 @@ print(f"1. Best K value: {best_k_acc}")
 print(f"2. Final model accuracy: {final_accuracy*100:.2f}%")
 print(f"3. Precision: {final_precision*100:.2f}% - Accuracy in identifying true patients")
 print(f"4. Recall: {final_recall*100:.2f}% - Ability to detect all actual patients")
+print(f"5. F1-Score: {final_f1*100:.2f}% - Harmonic mean of precision and recall")
 
 tn, fp, fn, tp = cm.ravel()
 print(f"\nConfusion Matrix Analysis:")
@@ -196,13 +215,22 @@ print(f"- False Positive (FP): {fp} - Healthy individuals incorrectly identified
 print(f"- False Negative (FN): {fn} - Patients incorrectly identified as healthy")
 print(f"- True Positive (TP): {tp} - Correctly identified patients")
 
+# Calculate additional metrics
+specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+false_positive_rate = fp / (fp + tn) if (fp + tn) > 0 else 0
+
+print(f"\nAdditional Metrics:")
+print(f"- Specificity: {specificity:.4f} - Ability to identify healthy individuals")
+print(f"- False Positive Rate: {false_positive_rate:.4f}")
+
 print(f"\nKey Insights:")
 print(f"- KNN model with k={best_k_acc} showed the best performance")
-print(f"- Low k values may cause overfitting")
-print(f"- High k values may cause underfitting")
-print(f"- Data standardization is essential for KNN")
-print(f"- Diabetes data is typically unbalanced which affects metrics")
-print(f"- The model shows good balance between precision and recall")
+print(f"- Low k values (1-5) may cause overfitting")
+print(f"- High k values (>20) may cause underfitting")
+print(f"- Data standardization is essential for KNN algorithm")
+print(f"- Diabetes dataset shows class imbalance: {y.value_counts().to_dict()}")
+print(f"- The model shows reasonable balance between precision and recall")
+print(f"- All plots have been saved in the '../img/knn/' directory")
 
 # Additional: Cross-validation for more reliable results
 print("\n" + "="*50)
@@ -210,5 +238,24 @@ print("CROSS-VALIDATION RESULTS:")
 print("="*50)
 cv_scores = cross_val_score(KNeighborsClassifier(n_neighbors=best_k_acc), 
                            X_scaled, y, cv=10, scoring='accuracy')
-print(f"Cross-validation scores: {cv_scores}")
+print(f"Cross-validation scores: {[f'{score:.4f}' for score in cv_scores]}")
 print(f"Mean CV accuracy: {cv_scores.mean():.4f} (+/- {cv_scores.std() * 2:.4f})")
+
+# Plot cross-validation results
+plt.figure(figsize=(10, 6))
+plt.plot(range(1, 11), cv_scores, marker='o', linewidth=2, markersize=8)
+plt.axhline(y=cv_scores.mean(), color='red', linestyle='--', label=f'Mean: {cv_scores.mean():.4f}')
+plt.xlabel('Fold Number')
+plt.ylabel('Accuracy')
+plt.title('10-Fold Cross-Validation Scores')
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.savefig('../img/knn/cross_validation_scores.png', dpi=300, bbox_inches='tight')
+plt.show()
+
+print(f"\nAll images have been successfully saved in the '../img/knn/' directory:")
+print("- knn_metrics_plot.png")
+print("- confusion_matrix.png")
+print("- feature_importance.png")
+print("- all_metrics_comparison.png")
+print("- cross_validation_scores.png")
